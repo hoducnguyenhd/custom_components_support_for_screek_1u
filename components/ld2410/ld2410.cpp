@@ -197,7 +197,7 @@ void LD2410Component::handle_periodic_data_(uint8_t *buffer, int len) {
       new_light = buffer[37];
 
       // 这一段是针对雷达输出的最小值接近82而准备的。(23年3月14日_16时43分_)
-      new_light = map(new_light, 0, 255, 0, 100);
+      new_light = map(new_light, 0, 232, 0, 100);
       if (new_light < 0){
         new_light = 0;
       }
