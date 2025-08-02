@@ -196,17 +196,7 @@ void LD2410Component::handle_periodic_data_(uint8_t *buffer, int len) {
     int new_light = -1;
     if (data_type == 0x01){ // 0x01 = 工程模式！
       int raw_light = buffer[37];
-    
-      // Ánh xạ raw=78..232 -> lux=0..1000
-      new_light = (raw_light - 78) * 1000 / 154;
-      if (new_light < 0){
-        new_light = 0;
-      }
-      if (new_light > 1000){
-        new_light = 1000;
-      }
-    
-      ESP_LOGD(TAG,"LD2410 Light: %d lux (raw: %d)", new_light, raw_light);
+      ESP_LOGD(TAG,"LD2410 Light raw: %d", new_light);
     }else{
       int32_t now_millis = millis();
       if (now_millis - last_change_fatory_mode_millis > 2000){
