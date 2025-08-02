@@ -43,7 +43,7 @@ CONFIG_SCHEMA = {
     cv.Optional(CONF_LIGHT): sensor.sensor_schema(
         device_class=STATE_CLASS_NONE, 
         icon=ICON_BRIGHTNESS_5,
-        unit_of_measurement=UNIT_"lx"
+        unit_of_measurement=UNIT_LUX
     ),
 }
 
