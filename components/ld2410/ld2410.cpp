@@ -196,7 +196,6 @@ void LD2410Component::handle_periodic_data_(uint8_t *buffer, int len) {
     if (data_type == 0x01){ // 0x01 = 工程模式！ 
       new_light = buffer[37];
       }
-      }
       ESP_LOGD(TAG,"LD2410 Sun Light: %d", new_light);
     }else{
       int32_t now_millis = millis();
