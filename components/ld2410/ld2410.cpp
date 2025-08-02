@@ -206,6 +206,7 @@ void LD2410Component::handle_periodic_data_(uint8_t *buffer, int len) {
       }
       // 重新赋予给光线。(23年3月14日_16时39分_)
       ESP_LOGD(TAG,"LD2410 Sun Light: %d%%", new_light);
+      ESP_LOGD(TAG,"LD2410 Sun Light: %d%", buffer[37]);
     }else{
       int32_t now_millis = millis();
       //TODO: 留下一个设置在里面。(23年3月13日_18时09分_)
