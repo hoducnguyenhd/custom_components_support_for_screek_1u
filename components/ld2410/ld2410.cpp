@@ -193,26 +193,26 @@ void LD2410Component::handle_periodic_data_(uint8_t *buffer, int len) {
     // 需要有传感器的时候才发射，不然很麻烦。(23年3月13日_17时47分_)
     int data_type = buffer[6];
     int new_light = -1;
-    if (data_type == 0x01){ // 0x01 = 工程模式！ 
-      new_light = buffer[37];
-      }
-      // 重新赋予给光线。(23年3月14日_16时39分_)
-      ESP_LOGD(TAG,"LD2410 Sun Light: %d", new_light);
-    }else{
+
+    if (data_type == 0x01) { // 0x01 = 工程模式！
+      new_light = buffer[37];  // Lấy giá trị gốc từ radar (0–255)
+      ESP_LOGD(TAG, "LD2410 Sun Light raw: %d", new_light);
+    } else {
       int32_t now_millis = millis();
       //TODO: 留下一个设置在里面。(23年3月13日_18时09分_)
-      /// 2秒才能改变一次啊！(23年3月13日_18时07分_)
+      // 2秒才能改变一次啊！(23年3月13日_18时07分_)
       if (now_millis - last_change_fatory_mode_millis > 2000){
-        ESP_LOGD(TAG,"Normal mode no light, change to factory mode");
-        // 重置工程模式。(23年3月13日_18时08分_)
+        ESP_LOGD(TAG, "Normal mode no light, change to factory mode");
         this->factory_mode(true);
         last_change_fatory_mode_millis = now_millis;
       }
     }
-    if (this->light_sensor_->get_state() != new_light){
-        this->light_sensor_->publish_state(new_light);
+
+    if (this->light_sensor_->get_state() != new_light) {
+      this->light_sensor_->publish_state(new_light);
     }
   }
+
 
 #endif
 
