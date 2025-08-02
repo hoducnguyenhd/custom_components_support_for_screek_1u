@@ -191,16 +191,28 @@ void LD2410Component::handle_periodic_data_(uint8_t *buffer, int len) {
   // 仅仅开启了光感这个设置才启用，否则就是不启用的。(23年3月13日_21时16分_)
   if (this->light_sensor_ != nullptr) { 
     // 需要有传感器的时候才发射，不然很麻烦。(23年3月13日_17时47分_)
-    // 需要有传感器的时候才发射，不然很麻烦。(23年3月13日_17时47分_)
     int data_type = buffer[6];
     int new_light = -1;
-    if (data_type == 0x01){ // 0x01 = 工程模式！
+    if (data_type == 0x01){ // 0x01 = 工程模式！ 
       new_light = buffer[37];
-      ESP_LOGD(TAG,"LD2410 Light raw: %d%", new_light);
+
+      // 这一段是针对雷达输出的最小值接近82而准备的。(23年3月14日_16时43分_)
+      //new_light = map(new_light, 85, 255, 0, 100);
+      //if (new_light < 0){
+      //  new_light = 0;
+      }
+      //if (new_light > 100){
+      //  new_light = 100;
+      }
+      // 重新赋予给光线。(23年3月14日_16时39分_)
+      ESP_LOGD(TAG,"LD2410 Sun Light: %d%", new_light);
     }else{
       int32_t now_millis = millis();
+      //TODO: 留下一个设置在里面。(23年3月13日_18时09分_)
+      /// 2秒才能改变一次啊！(23年3月13日_18时07分_)
       if (now_millis - last_change_fatory_mode_millis > 2000){
         ESP_LOGD(TAG,"Normal mode no light, change to factory mode");
+        // 重置工程模式。(23年3月13日_18时08分_)
         this->factory_mode(true);
         last_change_fatory_mode_millis = now_millis;
       }
@@ -208,7 +220,6 @@ void LD2410Component::handle_periodic_data_(uint8_t *buffer, int len) {
     if (this->light_sensor_->get_state() != new_light){
         this->light_sensor_->publish_state(new_light);
     }
-
   }
 
 #endif
