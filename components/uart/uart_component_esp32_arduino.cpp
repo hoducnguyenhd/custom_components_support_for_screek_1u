@@ -11,6 +11,7 @@
 
 namespace esphome {
 namespace uart {
+
 static const char *const TAG = "uart.arduino_esp32";
 
 static const uint32_t UART_PARITY_EVEN = 0 << 0;
@@ -26,20 +27,6 @@ static const uint32_t UART_TICK_APB_CLOCK = 1 << 27;
 
 uint32_t ESP32ArduinoUARTComponent::get_config() {
   uint32_t config = 0;
-
-  /*
-   * All bits numbers below come from
-   * framework-arduinoespressif32/cores/esp32/esp32-hal-uart.h
-   * And more specifically conf0 union in uart_dev_t.
-   *
-   * Below is bit used from conf0 union.
-   * <name>:<bits position>  <values>
-   * parity:0                0:even 1:odd
-   * parity_en:1             Set this bit to enable uart parity check.
-   * bit_num:2-4             0:5bits 1:6bits 2:7bits 3:8bits
-   * stop_bit_num:4-6        stop bit. 1:1bit  2:1.5bits  3:2bits
-   * tick_ref_always_on:27   select the clock.1：apb clock：ref_tick
-   */
 
   if (this->parity_ == UART_CONFIG_PARITY_EVEN) {
     config |= UART_PARITY_EVEN | UART_PARITY_ENABLE;
@@ -75,9 +62,6 @@ uint32_t ESP32ArduinoUARTComponent::get_config() {
 
 void ESP32ArduinoUARTComponent::setup() {
   ESP_LOGCONFIG(TAG, "Setting up UART...");
-  // Use Arduino HardwareSerial UARTs if all used pins match the ones
-  // preconfigured by the platform. For example if RX disabled but TX pin
-  // is 1 we still want to use Serial.
   bool is_default_tx, is_default_rx;
 #ifdef CONFIG_IDF_TARGET_ESP32C3
   is_default_tx = tx_pin_ == nullptr || tx_pin_->get_pin() == 21;
@@ -87,30 +71,18 @@ void ESP32ArduinoUARTComponent::setup() {
   is_default_rx = rx_pin_ == nullptr || rx_pin_->get_pin() == 3;
 #endif
 
-// 一个临时补丁，让USB-CDC串口和UART串口共存！(*23年3月7日*17时15分)
-// 这里需要考虑后来融入的新代码，为了让这个工作的更好，需要考虑这些发生的情况。(*23年5月23日*10时59分)
-#if defined(USE_ARDUINO) && defined(ARDUINO_USB_CDC_ON_BOOT) && ((defined(USE_ESP32_VARIANT_ESP32C3) && defined(ARDUINO_USB_MODE)) || defined(USE_ESP32_VARIANT_ESP32S2))
-  static uint8_t next_uart_num = 1;
-
-  this->number_ = next_uart_num;
-  this->hw_serial_ = new HardwareSerial(next_uart_num++);  // NOLINT(cppcoreguidelines-owning-memory)
-
-#else
-
   static uint8_t next_uart_num = 0;
-  // 问题在于这里，对于c3来说，似乎造成了一个硬件uart的冲突事件。(*23年5月23日*10时59分)
+
   if (is_default_tx && is_default_rx && next_uart_num == 0) {
     this->hw_serial_ = &Serial;
     next_uart_num++;
   } else {
 #ifdef USE_LOGGER
-    // The logger doesn't use this UART component, instead it targets the UARTs
-    // directly (i.e. Serial/Serial0, Serial1, and Serial2). If the logger is
-    // enabled, skip the UART that it is configured to use.
-    if (logger::global_logger->get_baud_rate() > 0 && logger::global_logger->get_uart() == next_uart_num) {
+    if (logger::global_logger->get_baud_rate() > 0 &&
+        logger::global_logger->get_uart() == next_uart_num) {
       next_uart_num++;
     }
-#endif  // USE_LOGGER
+#endif
 
     if (next_uart_num >= UART_NUM_MAX) {
       ESP_LOGW(TAG, "Maximum number of UART components created already.");
@@ -119,9 +91,8 @@ void ESP32ArduinoUARTComponent::setup() {
     }
 
     this->number_ = next_uart_num;
-    this->hw_serial_ = new HardwareSerial(next_uart_num++);  // NOLINT(cppcoreguidelines-owning-memory)
+    this->hw_serial_ = new HardwareSerial(next_uart_num++);
   }
-#endif
 
   int8_t tx = this->tx_pin_ != nullptr ? this->tx_pin_->get_pin() : -1;
   int8_t rx = this->rx_pin_ != nullptr ? this->rx_pin_->get_pin() : -1;
@@ -150,11 +121,6 @@ void ESP32ArduinoUARTComponent::dump_config() {
 
 void ESP32ArduinoUARTComponent::write_array(const uint8_t *data, size_t len) {
   this->hw_serial_->write(data, len);
-#ifdef USE_UART_DEBUGGER
-  for (size_t i = 0; i < len; i++) {
-    this->debug_callback_.call(UART_DIRECTION_TX, data[i]);
-  }
-#endif
 }
 
 bool ESP32ArduinoUARTComponent::peek_byte(uint8_t *data) {
@@ -168,11 +134,6 @@ bool ESP32ArduinoUARTComponent::read_array(uint8_t *data, size_t len) {
   if (!this->check_read_timeout_(len))
     return false;
   this->hw_serial_->readBytes(data, len);
-#ifdef USE_UART_DEBUGGER
-  for (size_t i = 0; i < len; i++) {
-    this->debug_callback_.call(UART_DIRECTION_RX, data[i]);
-  }
-#endif
   return true;
 }
 
@@ -188,9 +149,11 @@ void ESP32ArduinoUARTComponent::check_logger_conflict() {
     return;
   }
 
-  if (this->hw_serial_ == logger::global_logger->get_hw_serial()) {
-    ESP_LOGW(TAG, "  You're using the same serial port for logging and the UART component. Please "
-                  "disable logging over the serial port by setting logger->baud_rate to 0.");
+  auto log_uart = logger::global_logger->get_log_uart();
+  if (log_uart != nullptr && this->hw_serial_ == log_uart) {
+    ESP_LOGW(TAG,
+             "  You're using the same serial port for logging and the UART component. "
+             "Please disable logging by setting logger->baud_rate: 0");
   }
 #endif
 }
