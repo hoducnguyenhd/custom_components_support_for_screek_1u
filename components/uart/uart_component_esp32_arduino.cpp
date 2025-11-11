@@ -149,7 +149,7 @@ void ESP32ArduinoUARTComponent::check_logger_conflict() {
     return;
   }
 
-  auto log_uart = logger::global_logger->get_log_uart();
+  auto log_uart = logger::global_logger->get_uart();
   if (log_uart != nullptr && this->hw_serial_ == log_uart) {
     ESP_LOGW(TAG,
              "  You're using the same serial port for logging and the UART component. "
